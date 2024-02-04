@@ -1,30 +1,32 @@
-import express from 'express';
-import morgan from 'morgan';
-import helmet from 'helmet';
-import cors from 'cors';
+import express, { Request, Response } from "express";
+import next from "next";
+import { ParsedUrlQuery } from "querystring";
+import path from "path";
 
-import * as middlewares from './middlewares';
-import api from './api';
-import MessageResponse from './interfaces/MessageResponse';
+const dev = process.env.NODE_ENV !== "production";
+const app = next({ dev, dir: path.join(__dirname, "views") });
+const handle = app.getRequestHandler();
 
-require('dotenv').config();
+app.prepare().then(() => {
+  const server = express();
 
-const app = express();
+  // Your Express routes go here
+  server.get("/custom-route", (req: Request, res: Response) => {
+    const query = req.query as ParsedUrlQuery;
+    return app.render(req, res, "/custom-page", query);
+  });
 
-app.use(morgan('dev'));
-app.use(helmet());
-app.use(cors());
-app.use(express.json());
+  // Default route handling by Next.js
+  server.all("*", (req, res) => {
+    return handle(req, res);
+  });
 
-app.get<{}, MessageResponse>('/', (req, res) => {
-  res.json({
-    message: '🦄🌈✨👋🌎🌍🌏✨🌈🦄',
+  const PORT = process.env.PORT || 3000;
+
+  server.listen(PORT, (err?: Error) => {
+    if (err) throw err;
+    console.log(`> Ready on http://localhost:${PORT}`);
   });
 });
-
-app.use('/api/v1', api);
-
-app.use(middlewares.notFound);
-app.use(middlewares.errorHandler);
 
 export default app;
